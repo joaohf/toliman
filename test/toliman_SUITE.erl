@@ -154,6 +154,9 @@ t_a_b_hard_failover(Config) ->
     ok.
 
 t_a_b_with_takeover(Config) ->
+    % enable et
+    {ok, CollectorPid} = et_start(),
+
     % start normal
     Nodes = start_slaves(Config, [a, b]),
 
@@ -178,6 +181,8 @@ t_a_b_with_takeover(Config) ->
 
     ct:pal("Node B takeover"),
 
+    _ = et:trace_me(90, ct, takeover, [{what, "Node B takeover"}]),
+
     ok = ct_rpc:call(NodeB#centauri_node.node, application, takeover, [proxima, permanent]),
 
     ct:sleep(2000),
@@ -187,6 +192,8 @@ t_a_b_with_takeover(Config) ->
 
     ct:pal("Node A takeover"),
 
+    _ = et:trace_me(90, ct, takeover, [{what, "Node A takeover"}]),
+
     ok = ct_rpc:call(NodeA#centauri_node.node, application, takeover, [proxima, permanent]),
 
     {status, PidA1, _, _} = ct_rpc:call(NodeA#centauri_node.node, sys, get_status, [proxima]),
@@ -194,8 +201,13 @@ t_a_b_with_takeover(Config) ->
 
     ct:sleep(2000),
 
+    _ = et:trace_me(90, ct, stop_nodes, [{what, "Stopping nodes"}]),
+
     stop_slave(NodeB),
     stop_slave(NodeA),
+
+    % save et and stop collector
+    ok = et_stop(Config, CollectorPid),
 
     ok.
 %%--------------------------------------------------------------------
@@ -346,3 +358,14 @@ poll_until(Fun, Iterations, PauseMS) ->
         Reply ->
             Reply
     end.
+
+et_start() ->
+    {ok, CollectorPid} = et_collector:start_link([
+        {trace_global, true}, {trace_pattern, {et, max}}
+    ]).
+
+et_stop(Config, CollectorPid) ->
+    F = filename:join(?config(priv_dir, Config), "et.etrace"),
+    ok = et_collector:save_event_file(CollectorPid, F, [existing, clear, append]),
+    unlink(CollectorPid),
+    ok = et_collector:stop(CollectorPid).

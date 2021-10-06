@@ -34,23 +34,34 @@ start_link() ->
 %% @doc Syncronize a gen_server state from remote node to the local node.
 -spec fetch_state(node()) -> ok.
 fetch_state(Node) ->
+    _ = et:trace_me(20, proxima, fetch_state, [{node, Node}]),
+
     gen_server:call(?MODULE, {fetch_state, Node}).
 
 %% @doc Returns the gen_server state.
 -spec get_state(node()) -> {ok, state()}.
 get_state(Node) ->
     FromNode = erlang:node(),
+
+    _ = et:trace_me(20, proxima, get_state, [{node, Node}, {from_node, FromNode}]),
+
     gen_server:call({?MODULE, Node}, {get_state, FromNode}).
 
 %% @doc Sends a hello informing that a new centauri node is up.
 -spec hello(node(), any()) -> ok.
 hello(Node, Options) ->
+    _ = et:trace_me(30, {centauri, erlang:node()}, proxima, hello, [
+        {node, Node}, {options, Options}
+    ]),
+
     RequestId = gen_server:send_request({global, ?MODULE}, {hello, Node, Options}),
     gen_server:wait_response(RequestId, 5000).
 
 %% @doc Replies a ping/1 call.
 -spec pong(pid(), node()) -> ok.
 pong(From, Node) ->
+    _ = et:trace_me(30, {centauri, erlang:node()}, proxima, pong, [{node, Node}]),
+
     RequestId = gen_server:send_request({global, ?MODULE}, {pong, From, Node}),
     gen_server:wait_response(RequestId, 5000).
 

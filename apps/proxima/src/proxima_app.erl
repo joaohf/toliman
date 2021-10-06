@@ -12,6 +12,8 @@
 -include_lib("kernel/include/logger.hrl").
 
 start({takeover, OtherNode}, []) ->
+    _ = et:trace_me(80, {proxima_app, erlang:node()}, start, [{takeover, OtherNode}]),
+
     ?LOG_INFO("Taking over from ~p", [OtherNode]),
     case proxima_sup:start_link() of
         {error, {already_started, Pid}} ->
@@ -19,7 +21,9 @@ start({takeover, OtherNode}, []) ->
         {ok, Pid} ->
             {ok, Pid}
     end;
-start({failover, _OtherNode}, []) ->
+start({failover, OtherNode}, []) ->
+    _ = et:trace_me(80, {proxima_app, erlang:node()}, start, [{failover, OtherNode}]),
+
     ?LOG_INFO("Failing over proxima"),
     proxima_sup:start_link();
 start(normal, _StartArgs) ->
@@ -43,6 +47,8 @@ start_phase(takeover, _Type, []) ->
     ok;
 % go: to register global names, do other forms of complex initialisation, etc.
 start_phase(go, Type, []) ->
+    _ = et:trace_me(80, {proxima_app, erlang:node()}, start, [{go, Type}]),
+
     ?LOG_INFO("Start phase go: ~p", [Type]),
     Names = [proxima],
     Fun = fun(Name) ->
